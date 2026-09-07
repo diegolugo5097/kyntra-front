@@ -1,11 +1,13 @@
 import { useEffect, useState, Fragment } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 import { kgToDisplay, unitLabel } from '../utils/units.js';
 import BodyMetrics from './BodyMetrics.jsx';
 
 export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const weightUnit = user.weight_unit || 'kg';
   const [days, setDays] = useState([]);
   const [newDayName, setNewDayName] = useState('');
@@ -14,6 +16,8 @@ export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
   const [expandedExercise, setExpandedExercise] = useState(null);
   const [logs, setLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [editingExerciseId, setEditingExerciseId] = useState(null);
+  const [editExerciseForm, setEditExerciseForm] = useState({});
 
   async function toggleLogs(exerciseId) {
     if (expandedExercise === exerciseId) {
@@ -60,7 +64,9 @@ export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
     loadRoutine();
   }
 
-  async function removeDay(dayId) {
+  async function removeDay(dayId, dayName) {
+    const ok = await confirm(`¿Eliminar el día "${dayName}" y todos sus ejercicios? No se puede deshacer.`);
+    if (!ok) return;
     await api.deleteDay(dayId);
     loadRoutine();
   }
@@ -85,8 +91,43 @@ export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
     loadRoutine();
   }
 
-  async function removeExercise(exerciseId) {
+  async function removeExercise(exerciseId, exerciseName) {
+    const ok = await confirm(`¿Eliminar el ejercicio "${exerciseName}"? Se borrará también su historial de series. No se puede deshacer.`);
+    if (!ok) return;
     await api.deleteExercise(exerciseId);
+    loadRoutine();
+  }
+
+  function startEditExercise(ex) {
+    setEditingExerciseId(ex.id);
+    setEditExerciseForm({
+      name: ex.name || '',
+      target_sets: ex.target_sets ?? '',
+      target_reps: ex.target_reps || '',
+      rir: ex.rir ?? '',
+      rpe: ex.rpe || '',
+      rest: ex.rest || '',
+      notes: ex.notes || '',
+    });
+  }
+
+  function updateEditExerciseForm(field, value) {
+    setEditExerciseForm((prev) => ({ ...prev, [field]: value }));
+  }
+
+  async function saveEditExercise(exerciseId) {
+    const form = editExerciseForm;
+    if (!form.name?.trim()) return;
+    await api.updateExercise(exerciseId, {
+      name: form.name.trim(),
+      target_sets: form.target_sets ? Number(form.target_sets) : null,
+      target_reps: form.target_reps || null,
+      rir: form.rir ? Number(form.rir) : null,
+      rpe: form.rpe || null,
+      rest: form.rest || null,
+      notes: form.notes || null,
+    });
+    setEditingExerciseId(null);
     loadRoutine();
   }
 
@@ -96,7 +137,8 @@ export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
   }
 
   async function removeMedia(mediaId) {
-    if (!window.confirm('¿Eliminar esta evidencia? No se puede deshacer.')) return;
+    const ok = await confirm('¿Eliminar esta evidencia? No se puede deshacer.');
+    if (!ok) return;
     await api.deleteMedia(mediaId);
     loadMedia();
   }
@@ -120,7 +162,7 @@ export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
         <div key={day.id} className="day-card">
           <div className="day-card-head">
             <h3>{day.name}</h3>
-            <button className="btn-link danger" onClick={() => removeDay(day.id)}>Eliminar día</button>
+            <button className="btn-link danger" onClick={() => removeDay(day.id, day.name)}>Eliminar día</button>
           </div>
 
           <table className="exercise-table">
@@ -133,21 +175,83 @@ export default function RoutineEditor({ selectedUser, liveEvent, refreshKey }) {
               {day.exercises.map((ex) => (
                 <Fragment key={ex.id}>
                   <tr>
-                    <td>
-                      {ex.name}
-                      {ex.notes && <div className="ex-note">{ex.notes}</div>}
-                    </td>
-                    <td>{ex.target_sets ?? '—'}</td>
-                    <td>{ex.target_reps ?? '—'}</td>
-                    <td>{ex.rir ?? '—'}</td>
-                    <td>{ex.rpe ?? '—'}</td>
-                    <td>{ex.rest ?? '—'}</td>
-                    <td>
-                      <button className="btn-link" onClick={() => toggleLogs(ex.id)}>
-                        {expandedExercise === ex.id ? 'Ocultar' : 'Ver registros'}
-                      </button>
-                    </td>
-                    <td><button className="btn-link danger" onClick={() => removeExercise(ex.id)}>✕</button></td>
+                    {editingExerciseId === ex.id ? (
+                      <>
+                        <td>
+                          <input
+                            style={{ width: 130 }}
+                            value={editExerciseForm.name}
+                            onChange={(e) => updateEditExerciseForm('name', e.target.value)}
+                          />
+                          <input
+                            style={{ width: 130, marginTop: 4, display: 'block' }}
+                            placeholder="Indicaciones"
+                            value={editExerciseForm.notes}
+                            onChange={(e) => updateEditExerciseForm('notes', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            style={{ width: 55 }}
+                            value={editExerciseForm.target_sets}
+                            onChange={(e) => updateEditExerciseForm('target_sets', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            style={{ width: 65 }}
+                            value={editExerciseForm.target_reps}
+                            onChange={(e) => updateEditExerciseForm('target_reps', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            style={{ width: 45 }}
+                            value={editExerciseForm.rir}
+                            onChange={(e) => updateEditExerciseForm('rir', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            style={{ width: 55 }}
+                            value={editExerciseForm.rpe}
+                            onChange={(e) => updateEditExerciseForm('rpe', e.target.value)}
+                          />
+                        </td>
+                        <td>
+                          <input
+                            style={{ width: 80 }}
+                            value={editExerciseForm.rest}
+                            onChange={(e) => updateEditExerciseForm('rest', e.target.value)}
+                          />
+                        </td>
+                        <td colSpan={2}>
+                          <button className="btn-link" onClick={() => saveEditExercise(ex.id)}>Guardar</button>{' '}
+                          <button className="btn-link" onClick={() => setEditingExerciseId(null)}>Cancelar</button>
+                        </td>
+                      </>
+                    ) : (
+                      <>
+                        <td>
+                          {ex.name}
+                          {ex.notes && <div className="ex-note">{ex.notes}</div>}
+                        </td>
+                        <td>{ex.target_sets ?? '—'}</td>
+                        <td>{ex.target_reps ?? '—'}</td>
+                        <td>{ex.rir ?? '—'}</td>
+                        <td>{ex.rpe ?? '—'}</td>
+                        <td>{ex.rest ?? '—'}</td>
+                        <td>
+                          <button className="btn-link" onClick={() => toggleLogs(ex.id)}>
+                            {expandedExercise === ex.id ? 'Ocultar' : 'Ver registros'}
+                          </button>
+                        </td>
+                        <td>
+                          <button className="btn-link" onClick={() => startEditExercise(ex)}>Editar</button>{' '}
+                          <button className="btn-link danger" onClick={() => removeExercise(ex.id, ex.name)}>✕</button>
+                        </td>
+                      </>
+                    )}
                   </tr>
                   {expandedExercise === ex.id && (
                     <tr>

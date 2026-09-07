@@ -1,11 +1,14 @@
 import { useEffect, useRef, useState } from 'react';
 import { api } from '../api.js';
 import { playNotificationSound } from '../utils/sound.js';
-import { Bell } from 'lucide-react';
+import { Bell, Smartphone, BellOff } from 'lucide-react';
+import { isPushSupported, getPushSubscriptionState, subscribeToPush, unsubscribeFromPush } from '../utils/push.js';
 
 export default function Notifications({ liveEvent, refreshKey }) {
   const [items, setItems] = useState([]);
   const [open, setOpen] = useState(false);
+  const [pushState, setPushState] = useState('checking'); // checking | unsupported | denied | subscribed | not-subscribed
+  const [pushBusy, setPushBusy] = useState(false);
   const loadedOnce = useRef(false);
 
   function load() {
@@ -21,6 +24,14 @@ export default function Notifications({ liveEvent, refreshKey }) {
   }, [refreshKey]);
 
   useEffect(() => {
+    if (!isPushSupported()) {
+      setPushState('unsupported');
+      return;
+    }
+    getPushSubscriptionState().then(setPushState);
+  }, []);
+
+  useEffect(() => {
     if (liveEvent?.event !== 'notification') return;
     setItems((prev) => [liveEvent.data, ...prev]);
     // Solo suena para notificaciones que llegan en vivo, no para la carga inicial del historial.
@@ -32,6 +43,24 @@ export default function Notifications({ liveEvent, refreshKey }) {
   async function markAll() {
     await api.markAllRead();
     setItems((prev) => prev.map((n) => ({ ...n, is_read: true })));
+  }
+
+  async function togglePush() {
+    setPushBusy(true);
+    try {
+      if (pushState === 'subscribed') {
+        await unsubscribeFromPush();
+        setPushState('not-subscribed');
+      } else {
+        await subscribeToPush();
+        setPushState('subscribed');
+      }
+    } catch (err) {
+      if (Notification.permission === 'denied') setPushState('denied');
+      else alert(err.message);
+    } finally {
+      setPushBusy(false);
+    }
   }
 
   return (
@@ -50,6 +79,24 @@ export default function Notifications({ liveEvent, refreshKey }) {
               </button>
             )}
           </div>
+
+          {pushState !== 'unsupported' && (
+            <div className="notif-push-row">
+              {pushState === 'denied' ? (
+                <span className="muted">
+                  <BellOff size={14} /> Bloqueaste los permisos de notificación en tu navegador.
+                </span>
+              ) : (
+                <button className="btn-link push-toggle" onClick={togglePush} disabled={pushBusy}>
+                  <Smartphone size={14} />
+                  {pushState === 'subscribed'
+                    ? 'Desactivar notificaciones en este dispositivo'
+                    : 'Activar notificaciones en este dispositivo'}
+                </button>
+              )}
+            </div>
+          )}
+
           {items.length === 0 && <p className="muted notif-empty">Sin notificaciones.</p>}
           {items.map((n) => (
             <div key={n.id} className={`notif-item ${n.is_read ? '' : 'unread'}`}>

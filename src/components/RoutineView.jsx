@@ -1,18 +1,22 @@
 import { useEffect, useState, Fragment } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 import { kgToDisplay, displayToKg, unitLabel } from '../utils/units.js';
 import BodyMetrics from './BodyMetrics.jsx';
 import UnitToggle from './UnitToggle.jsx';
 
 export default function RoutineView({ liveEvent, refreshKey }) {
   const { user } = useAuth();
+  const confirm = useConfirm();
   const weightUnit = user.weight_unit || 'kg';
   const [days, setDays] = useState([]);
   const [logForms, setLogForms] = useState({}); // exerciseId -> {weight, reps, rir}
   const [expandedExercise, setExpandedExercise] = useState(null);
   const [historyLogs, setHistoryLogs] = useState([]);
   const [loadingLogs, setLoadingLogs] = useState(false);
+  const [editingLogId, setEditingLogId] = useState(null);
+  const [editLogForm, setEditLogForm] = useState({});
   const [media, setMedia] = useState([]);
   const [uploadTarget, setUploadTarget] = useState({ day_id: '', exercise_id: '' });
   const [uploading, setUploading] = useState(false);
@@ -71,6 +75,34 @@ export default function RoutineView({ liveEvent, refreshKey }) {
     }
   }
 
+  function startEditLog(log) {
+    setEditingLogId(log.id);
+    setEditLogForm({
+      weight: log.weight_kg ? kgToDisplay(log.weight_kg, weightUnit) : '',
+      reps: log.reps ?? '',
+      rir: log.rir ?? '',
+    });
+  }
+
+  async function saveEditLog(logId) {
+    await api.updateLog(logId, {
+      weight_kg: displayToKg(editLogForm.weight, weightUnit),
+      reps: editLogForm.reps ? Number(editLogForm.reps) : null,
+      rir: editLogForm.rir ? Number(editLogForm.rir) : null,
+    });
+    setEditingLogId(null);
+    const data = await api.getLogs(expandedExercise);
+    setHistoryLogs(data);
+  }
+
+  async function deleteLog(logId) {
+    const ok = await confirm('¿Eliminar este registro?');
+    if (!ok) return;
+    await api.deleteLog(logId);
+    const data = await api.getLogs(expandedExercise);
+    setHistoryLogs(data);
+  }
+
   async function handleUpload(e) {
     e.preventDefault();
     const file = e.target.file.files[0];
@@ -90,7 +122,8 @@ export default function RoutineView({ liveEvent, refreshKey }) {
   }
 
   async function removeMedia(mediaId) {
-    if (!window.confirm('¿Eliminar esta evidencia? No se puede deshacer.')) return;
+    const ok = await confirm('¿Eliminar esta evidencia? No se puede deshacer.');
+    if (!ok) return;
     await api.deleteMedia(mediaId);
     loadMedia();
   }
@@ -162,16 +195,52 @@ export default function RoutineView({ liveEvent, refreshKey }) {
                         {!loadingLogs && historyLogs.length > 0 && (
                           <table className="logs-table">
                             <thead>
-                              <tr><th>Fecha</th><th>Serie</th><th>Peso ({unitLabel(weightUnit)})</th><th>Reps</th><th>RIR</th></tr>
+                              <tr><th>Fecha</th><th>Serie</th><th>Peso ({unitLabel(weightUnit)})</th><th>Reps</th><th>RIR</th><th></th></tr>
                             </thead>
                             <tbody>
                               {historyLogs.map((log) => (
                                 <tr key={log.id}>
                                   <td>{new Date(log.log_date).toLocaleDateString('es-CO')}</td>
                                   <td>{log.set_number}</td>
-                                  <td>{log.weight_kg ? kgToDisplay(log.weight_kg, weightUnit) : '—'}</td>
-                                  <td>{log.reps ?? '—'}</td>
-                                  <td>{log.rir ?? '—'}</td>
+                                  {editingLogId === log.id ? (
+                                    <>
+                                      <td>
+                                        <input
+                                          style={{ width: 55 }}
+                                          value={editLogForm.weight}
+                                          onChange={(e) => setEditLogForm((f) => ({ ...f, weight: e.target.value }))}
+                                        />
+                                      </td>
+                                      <td>
+                                        <input
+                                          style={{ width: 50 }}
+                                          value={editLogForm.reps}
+                                          onChange={(e) => setEditLogForm((f) => ({ ...f, reps: e.target.value }))}
+                                        />
+                                      </td>
+                                      <td>
+                                        <input
+                                          style={{ width: 45 }}
+                                          value={editLogForm.rir}
+                                          onChange={(e) => setEditLogForm((f) => ({ ...f, rir: e.target.value }))}
+                                        />
+                                      </td>
+                                      <td>
+                                        <button className="btn-link" onClick={() => saveEditLog(log.id)}>Guardar</button>{' '}
+                                        <button className="btn-link" onClick={() => setEditingLogId(null)}>Cancelar</button>
+                                      </td>
+                                    </>
+                                  ) : (
+                                    <>
+                                      <td>{log.weight_kg ? kgToDisplay(log.weight_kg, weightUnit) : '—'}</td>
+                                      <td>{log.reps ?? '—'}</td>
+                                      <td>{log.rir ?? '—'}</td>
+                                      <td>
+                                        <button className="btn-link" onClick={() => startEditLog(log)}>Editar</button>{' '}
+                                        <button className="btn-link danger" onClick={() => deleteLog(log.id)}>✕</button>
+                                      </td>
+                                    </>
+                                  )}
                                 </tr>
                               ))}
                             </tbody>

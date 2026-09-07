@@ -7,6 +7,7 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [busy, setBusy] = useState(false);
+  const [showForgot, setShowForgot] = useState(false);
 
   async function handleSubmit(e) {
     e.preventDefault();
@@ -49,6 +50,17 @@ export default function Login() {
             {busy ? 'Entrando…' : 'Entrar'}
           </button>
         </form>
+
+        <button className="btn-link forgot-link" onClick={() => setShowForgot((s) => !s)}>
+          ¿Olvidaste tu contraseña?
+        </button>
+        {showForgot && (
+          <p className="muted forgot-text">
+            Aquí no hay recuperación por correo: si eres alumno, pídele a tu entrenador que te
+            restablezca la contraseña desde su panel. Si eres el entrenador, pide a quien administre
+            el servidor que corra el script <code>resetPassword.js</code>.
+          </p>
+        )}
       </div>
     </div>
   );

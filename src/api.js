@@ -45,12 +45,20 @@ export const api = {
   logSet: (exerciseId, data) =>
     request(`/api/routines/exercises/${exerciseId}/logs`, { method: 'POST', body: data }),
   getLogs: (exerciseId) => request(`/api/routines/exercises/${exerciseId}/logs`),
+  updateLog: (logId, data) => request(`/api/routines/logs/${logId}`, { method: 'PUT', body: data }),
+  deleteLog: (logId) => request(`/api/routines/logs/${logId}`, { method: 'DELETE' }),
+
+  resetUserPassword: (userId) => request(`/api/users/${userId}/reset-password`, { method: 'PUT' }),
+  deleteUser: (userId) => request(`/api/users/${userId}`, { method: 'DELETE' }),
 
   setWeightUnit: (weight_unit) => request('/api/auth/unit', { method: 'PUT', body: { weight_unit } }),
 
   createBodyMetric: (userId, data) => request(`/api/body-metrics/${userId}`, { method: 'POST', body: data }),
   getBodyMetrics: (userId) => request(`/api/body-metrics/${userId}`),
   deleteBodyMetric: (id) => request(`/api/body-metrics/entry/${id}`, { method: 'DELETE' }),
+
+  subscribePush: (subscription) => request('/api/push/subscribe', { method: 'POST', body: subscription }),
+  unsubscribePush: (data) => request('/api/push/unsubscribe', { method: 'POST', body: data }),
 
   uploadMedia: (formData) => request('/api/media/upload', { method: 'POST', body: formData, isForm: true }),
   getMedia: (userId) => request(`/api/media/${userId}`),

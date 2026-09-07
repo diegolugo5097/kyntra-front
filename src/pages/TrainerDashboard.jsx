@@ -1,14 +1,16 @@
 import { useEffect, useState } from 'react';
 import { api } from '../api.js';
 import { useAuth } from '../context/AuthContext.jsx';
+import { useConfirm } from '../context/ConfirmContext.jsx';
 import { useWebSocket } from '../hooks/useWebSocket.js';
 import Notifications from '../components/Notifications.jsx';
 import RoutineEditor from '../components/RoutineEditor.jsx';
 import Chat from '../components/Chat.jsx';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, KeyRound, Trash2 } from 'lucide-react';
 
 export default function TrainerDashboard() {
   const { user, logout } = useAuth();
+  const confirm = useConfirm();
   const [users, setUsers] = useState([]);
   const [selected, setSelected] = useState(null);
   const [tab, setTab] = useState('routine'); // 'routine' | 'chat'
@@ -39,6 +41,30 @@ export default function TrainerDashboard() {
     const { user: created, temp_password } = await api.createUser(newUser.name, newUser.email);
     setCreatedCreds({ ...created, temp_password });
     setNewUser({ name: '', email: '' });
+    loadUsers();
+  }
+
+  async function handleResetPassword(e, targetUser) {
+    e.stopPropagation();
+    const ok = await confirm(
+      `¿Restablecer la contraseña de ${targetUser.name}? Se le generará una nueva temporal.`,
+      { confirmLabel: 'Restablecer', danger: false }
+    );
+    if (!ok) return;
+    const { user: updated, temp_password } = await api.resetUserPassword(targetUser.id);
+    setCreatedCreds({ ...updated, temp_password });
+    loadUsers();
+  }
+
+  async function handleDeleteUser(e, targetUser) {
+    e.stopPropagation();
+    const ok = await confirm(
+      `¿Eliminar a ${targetUser.name} definitivamente? Se borra su rutina, registros, medidas, evidencia y chat. Esto no se puede deshacer.`,
+      { confirmLabel: 'Eliminar usuario' }
+    );
+    if (!ok) return;
+    await api.deleteUser(targetUser.id);
+    if (selected?.id === targetUser.id) setSelected(null);
     loadUsers();
   }
 
@@ -92,7 +118,7 @@ export default function TrainerDashboard() {
 
           {createdCreds && (
             <div className="creds-box">
-              <p>Cuenta creada para <strong>{createdCreds.name}</strong>. Entrégale estas credenciales:</p>
+              <p>Credenciales para <strong>{createdCreds.name}</strong> — entrégaselas:</p>
               <p>Email: <code>{createdCreds.email}</code></p>
               <p>Contraseña temporal: <code>{createdCreds.temp_password}</code></p>
               <button className="btn-link" onClick={() => setCreatedCreds(null)}>Cerrar</button>
@@ -106,8 +132,26 @@ export default function TrainerDashboard() {
                 className={selected?.id === u.id ? 'active' : ''}
                 onClick={() => setSelected(u)}
               >
-                {u.name}
-                {u.must_change_password && <span className="pill">Sin activar</span>}
+                <span className="user-list-name">
+                  {u.name}
+                  {u.must_change_password && <span className="pill">Sin activar</span>}
+                </span>
+                <span className="user-list-actions">
+                  <button
+                    className="icon-btn icon-btn-sm"
+                    title="Restablecer contraseña"
+                    onClick={(e) => handleResetPassword(e, u)}
+                  >
+                    <KeyRound size={15} />
+                  </button>
+                  <button
+                    className="icon-btn icon-btn-sm danger"
+                    title="Eliminar usuario"
+                    onClick={(e) => handleDeleteUser(e, u)}
+                  >
+                    <Trash2 size={15} />
+                  </button>
+                </span>
               </li>
             ))}
           </ul>
