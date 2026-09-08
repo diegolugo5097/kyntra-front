@@ -1,6 +1,7 @@
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext.jsx';
 import { ConfirmProvider } from './context/ConfirmContext.jsx';
+import { ThemeProvider } from './context/ThemeContext.jsx';
 import Login from './pages/Login.jsx';
 import ChangePassword from './pages/ChangePassword.jsx';
 import TrainerDashboard from './pages/TrainerDashboard.jsx';
@@ -18,12 +19,14 @@ function Gate() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <ConfirmProvider>
-        <Routes>
-          <Route path="*" element={<Gate />} />
-        </Routes>
-      </ConfirmProvider>
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <ConfirmProvider>
+          <Routes>
+            <Route path="*" element={<Gate />} />
+          </Routes>
+        </ConfirmProvider>
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

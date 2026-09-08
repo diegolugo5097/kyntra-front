@@ -6,6 +6,7 @@ import { useWebSocket } from '../hooks/useWebSocket.js';
 import Notifications from '../components/Notifications.jsx';
 import RoutineEditor from '../components/RoutineEditor.jsx';
 import Chat from '../components/Chat.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { RefreshCw, KeyRound, Trash2 } from 'lucide-react';
 
 export default function TrainerDashboard() {
@@ -80,6 +81,7 @@ export default function TrainerDashboard() {
           </div>
         </div>
         <div className="header-actions">
+          <ThemeToggle />
           <button className="icon-btn" onClick={refreshAll} title="Refrescar">
             <RefreshCw size={19} />
           </button>

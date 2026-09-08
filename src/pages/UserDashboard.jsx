@@ -4,6 +4,7 @@ import { useWebSocket } from '../hooks/useWebSocket.js';
 import Notifications from '../components/Notifications.jsx';
 import RoutineView from '../components/RoutineView.jsx';
 import Chat from '../components/Chat.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 import { RefreshCw } from 'lucide-react';
 
 export default function UserDashboard() {
@@ -26,6 +27,7 @@ export default function UserDashboard() {
           </div>
         </div>
         <div className="header-actions">
+          <ThemeToggle />
           <button className="icon-btn" onClick={() => setRefreshKey((k) => k + 1)} title="Refrescar">
             <RefreshCw size={19} />
           </button>

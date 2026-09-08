@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { useAuth } from '../context/AuthContext.jsx';
+import ThemeToggle from '../components/ThemeToggle.jsx';
 
 export default function Login() {
   const { login } = useAuth();
@@ -24,6 +25,9 @@ export default function Login() {
 
   return (
     <div className="auth-screen">
+      <div className="theme-toggle-floating">
+        <ThemeToggle />
+      </div>
       <div className="auth-card">
         <div className="auth-header">
           <img src="/icons/icon-192.png" alt="Kyntra" className="auth-logo" />

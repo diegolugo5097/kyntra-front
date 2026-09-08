@@ -9,6 +9,7 @@ import {
   Legend,
 } from 'recharts';
 import { kgToDisplay, unitLabel } from '../utils/units.js';
+import { useTheme } from '../context/ThemeContext.jsx';
 
 const MEASURE_COLORS = {
   pecho: '#00bfaa',
@@ -17,6 +18,11 @@ const MEASURE_COLORS = {
   brazoDer: '#c084fc',
   piernaIzq: '#e8607a',
   piernaDer: '#38bdf8',
+};
+
+const CHART_PALETTE = {
+  dark: { grid: 'rgba(255,255,255,0.06)', axis: '#93a3a6', tooltipBg: '#131b24', tooltipBorder: '#263140', tooltipText: '#edf3f2' },
+  light: { grid: 'rgba(10,20,25,0.08)', axis: '#5c6d72', tooltipBg: '#ffffff', tooltipBorder: '#dbe3e4', tooltipText: '#16232a' },
 };
 
 function formatDate(dateStr) {
@@ -29,6 +35,8 @@ function chronological(history) {
 }
 
 export default function BodyMetricsChart({ history, weightUnit }) {
+  const { theme } = useTheme();
+  const c = CHART_PALETTE[theme] || CHART_PALETTE.dark;
   const sorted = chronological(history);
 
   const weightData = sorted
@@ -60,8 +68,8 @@ export default function BodyMetricsChart({ history, weightUnit }) {
       ) : (
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={weightData} margin={{ top: 8, right: 8, left: -12, bottom: 0 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="date" stroke="#93a3a6" fontSize={12} tickLine={false} axisLine={{ stroke: '#263140' }} />
+            <CartesianGrid stroke={c.grid} vertical={false} />
+            <XAxis dataKey="date" stroke={c.axis} fontSize={12} tickLine={false} axisLine={{ stroke: c.tooltipBorder }} />
             <YAxis
               yAxisId="peso"
               stroke="#00bfaa"
@@ -80,10 +88,10 @@ export default function BodyMetricsChart({ history, weightUnit }) {
               label={{ value: '%', position: 'insideRight', fill: '#f2b84a', fontSize: 11 }}
             />
             <Tooltip
-              contentStyle={{ background: '#131b24', border: '1px solid #263140', borderRadius: 10, fontSize: 13 }}
-              labelStyle={{ color: '#edf3f2' }}
+              contentStyle={{ background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 10, fontSize: 13 }}
+              labelStyle={{ color: c.tooltipText }}
             />
-            <Legend wrapperStyle={{ fontSize: 12, color: '#93a3a6' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: c.axis }} />
             <Line
               yAxisId="peso" type="monotone" dataKey="peso" name={`Peso (${unitLabel(weightUnit)})`}
               stroke="#00bfaa" strokeWidth={2.5} dot={{ r: 3, fill: '#00bfaa' }} connectNulls
@@ -99,20 +107,20 @@ export default function BodyMetricsChart({ history, weightUnit }) {
       {measureData.length >= 2 && (
         <ResponsiveContainer width="100%" height={260}>
           <LineChart data={measureData} margin={{ top: 24, right: 8, left: -12, bottom: 0 }}>
-            <CartesianGrid stroke="rgba(255,255,255,0.06)" vertical={false} />
-            <XAxis dataKey="date" stroke="#93a3a6" fontSize={12} tickLine={false} axisLine={{ stroke: '#263140' }} />
+            <CartesianGrid stroke={c.grid} vertical={false} />
+            <XAxis dataKey="date" stroke={c.axis} fontSize={12} tickLine={false} axisLine={{ stroke: c.tooltipBorder }} />
             <YAxis
-              stroke="#93a3a6"
+              stroke={c.axis}
               fontSize={12}
               tickLine={false}
               axisLine={false}
-              label={{ value: 'cm', angle: -90, position: 'insideLeft', fill: '#93a3a6', fontSize: 11 }}
+              label={{ value: 'cm', angle: -90, position: 'insideLeft', fill: c.axis, fontSize: 11 }}
             />
             <Tooltip
-              contentStyle={{ background: '#131b24', border: '1px solid #263140', borderRadius: 10, fontSize: 13 }}
-              labelStyle={{ color: '#edf3f2' }}
+              contentStyle={{ background: c.tooltipBg, border: `1px solid ${c.tooltipBorder}`, borderRadius: 10, fontSize: 13 }}
+              labelStyle={{ color: c.tooltipText }}
             />
-            <Legend wrapperStyle={{ fontSize: 12, color: '#93a3a6' }} />
+            <Legend wrapperStyle={{ fontSize: 12, color: c.axis }} />
             <Line type="monotone" dataKey="pecho" name="Pecho (cm)" stroke={MEASURE_COLORS.pecho} strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
             <Line type="monotone" dataKey="torso" name="Torso (cm)" stroke={MEASURE_COLORS.torso} strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
             <Line type="monotone" dataKey="brazoIzq" name="Brazo izq. (cm)" stroke={MEASURE_COLORS.brazoIzq} strokeWidth={2.5} dot={{ r: 3 }} connectNulls />
