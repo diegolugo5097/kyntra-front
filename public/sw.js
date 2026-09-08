@@ -1,4 +1,4 @@
-const CACHE_NAME = 'rutinas-shell-v1';
+const CACHE_NAME = 'rutinas-shell-v2';
 
 self.addEventListener('install', () => {
   self.skipWaiting();
@@ -22,16 +22,13 @@ self.addEventListener('fetch', (event) => {
   if (url.pathname.startsWith('/api') || url.pathname.startsWith('/ws')) return;
 
   event.respondWith(
-    caches.match(request).then((cached) => {
-      const network = fetch(request)
-        .then((response) => {
-          const clone = response.clone();
-          caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
-          return response;
-        })
-        .catch(() => cached);
-      return cached || network;
-    })
+    fetch(request)
+      .then((response) => {
+        const clone = response.clone();
+        caches.open(CACHE_NAME).then((cache) => cache.put(request, clone));
+        return response;
+      })
+      .catch(() => caches.match(request)) // sin internet: usa lo último que se guardó
   );
 });
 

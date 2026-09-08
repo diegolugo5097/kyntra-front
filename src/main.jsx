@@ -16,7 +16,7 @@ ReactDOM.createRoot(document.getElementById('root')).render(
 // causaba que se sirvieran archivos cacheados viejos en vez de tus cambios más recientes.
 if (import.meta.env.PROD && 'serviceWorker' in navigator) {
   window.addEventListener('load', () => {
-    navigator.serviceWorker.register('/sw.js').catch(() => {
+    navigator.serviceWorker.register('/sw.js', { updateViaCache: 'none' }).catch(() => {
       /* si falla el registro, la app sigue funcionando normal, solo sin modo offline */
     });
   });
